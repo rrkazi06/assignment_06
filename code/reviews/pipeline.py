@@ -54,7 +54,7 @@ def sentiment_step(reviews: pd.DataFrame, cache_file: str) -> list:
             return json.load(fh)
     documents = []
     for row in reviews.to_dict("records"):
-        response = get_sentiment(row["text"])        
+        response = get_sentiment(row["text"])
         document = response["results"]["documents"][0]
         document["review_id"] = row["review_id"]
         documents.append(document)
@@ -76,11 +76,12 @@ def entities_step(reviews: pd.DataFrame, cache_file: str) -> list:
     for row in reviews.to_dict("records"):
         response = get_entities(row["text"])
         document = response["results"]["documents"][0]
-        document["review_id"] = row["review_id"]        
+        document["review_id"] = row["review_id"]
         documents.append(document)
     with open(cache_file, "w") as fh:
         json.dump(documents, fh)
     return documents
+
 
 def sentences_table(documents: list) -> pd.DataFrame:
     """One row per sentence: the sentiment documents flattened with `json_normalize`.
@@ -138,14 +139,14 @@ def opinions_table(documents: list) -> pd.DataFrame:
                     if relation["relationType"] != "assessment":
                         continue
                     position = int(relation["ref"].split("/")[-1])
-                    texts.append(assessments[position]["text"])          # the text of assessments[position]
+                    texts.append(assessments[position]["text"])
                 rows.append({
                     "review_id": document["review_id"],
                     "sentence_id": sentence_id,
-                    "mention":target["text"],            # target's text
-                    "mention_sentiment": target["sentiment"],  # target's sentiment
+                    "mention": target["text"],
+                    "mention_sentiment": target["sentiment"],
                     "assessments": ", ".join(texts),
-                    "mention_offset": target["offset"],     # target's offset
+                    "mention_offset": target["offset"],
                     "source": "opinion",
                 })
     return pd.DataFrame(rows, columns=[
@@ -169,7 +170,10 @@ def entities_table(documents: list) -> pd.DataFrame:
     df = pd.json_normalize(documents, record_path="entities",
                            meta=["review_id"], record_prefix="entity_")
     df = df[df["entity_category"].isin(MENTION_CATEGORIES)]
-    return df[["review_id", "entity_text", "entity_category", "entity_offset"]].reset_index(drop=True)
+    return df[["review_id",
+               "entity_text",
+               "entity_category",
+               "entity_offset"]].reset_index(drop=True)
 
 
 def subjects_step(reviews: pd.DataFrame, mentions: pd.DataFrame,
@@ -193,18 +197,26 @@ def subjects_step(reviews: pd.DataFrame, mentions: pd.DataFrame,
     """
     if os.path.exists(cache_file):
         return pd.read_csv(cache_file)
-    rows = [] 
+    rows = []
     for review_id, group in mentions.groupby("review_id"):
-        review_text = reviews.loc[reviews["review_id"] == review_id, "text"].iloc[0]          # the review's text, looked up from reviews
-        ordered = group.sort_values("mention_offset")["mention"].drop_duplicates().tolist()
+        review_text = reviews.loc[
+            reviews["review_id"] == review_id, "text"
+        ].iloc[0]
+        ordered = (
+            group.sort_values("mention_offset")["mention"]
+            .drop_duplicates()
+            .tolist()
+        )
         answers = classify_mentions(review_text, ordered)["answers"]
         for mention in ordered:
             rows.append({
                 "review_id": review_id,
                 "mention": mention,
                 "subject": answers[mention]["choice"],
-                "subject_confidence": answers[mention]["confidence"],   # the confidence for this mention
+                "subject_confidence": answers[mention]["confidence"],
             })
-    result = pd.DataFrame(rows, columns=["review_id", "mention", "subject", "subject_confidence"])
+    result = pd.DataFrame(
+        rows,
+        columns=["review_id", "mention", "subject", "subject_confidence"])
     result.to_csv(cache_file, index=False)
-    return result  
+    return result

@@ -54,6 +54,7 @@ def get_sentiment(text: str) -> dict:
     response.raise_for_status()
     return response.json()
 
+
 def get_entities(text: str) -> dict:
     """Azure named-entity recognition for one piece of text.
 
