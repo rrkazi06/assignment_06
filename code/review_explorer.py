@@ -127,12 +127,7 @@ if ask and question.strip():
     # Uses `mentions`, not `selected`: the question decides the scope, not the filters.
     scope, evidence = answer_question(question, mentions, load_aliases())
 
-    if not any(scope.values()):
-        st.warning(
-            "That question doesn't name a menu item, a staff member, or part "
-            "of the shop, so the reviews can't answer it."
-        )
-    elif evidence.empty:
+    if evidence.empty:
         st.warning(
             f"No reviews mention {describe_scope(scope)}. Try a menu item, "
             "a staff member, or part of the shop."
